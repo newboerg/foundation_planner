@@ -252,12 +252,12 @@
 
     }
 
-    erzeugeKind(t=4){
+    erzeugeKind(t=4,aakt=0){
       // console.log(this);
       var tp0 = new Punkt(this.p[0+this.akt].x,this.p[0+this.akt].y);
       var tp1 = new Punkt(this.p[(1+this.akt)%this.typ].x,this.p[(1+this.akt)%this.typ].y);
       // console.log(tp0);
-      var ret = new Fundament(tp1,tp0,t,this,0);
+      var ret = new Fundament(tp1,tp0,t,this,this.akt);
       //this.nachbarn[this.akt] = ret;
       //this.anzNachbarn++;
       // console.log(this);
