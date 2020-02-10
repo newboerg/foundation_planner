@@ -59,7 +59,7 @@
     {x: 500, y: 510, w: 20, h: 50},
     {x: 550, y: 570, w: 15, h: 30}    // etc.
   ], i = 0, r;
-  function vergleichePunkt(a,b,abweichung=0.001){
+  function vergleichePunkt(a,b,abweichung=0.1){
     if(a.x - abweichung > b.x || a.x + abweichung < b.x) return false;
     if(a.y - abweichung > b.y || a.y + abweichung < b.y) return false;
     return true;
