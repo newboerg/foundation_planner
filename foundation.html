@@ -470,9 +470,9 @@
     } else if (e.keyCode==50){ //Taste 2
       console.log(fundamente);
     } else if (e.keyCode==53 || e.keyCode==54){ //Taste + / -
-      function zoooom(in =true){
+      function zoom(rein =true){
         var faktor =0.8;
-        if (in) faktor =1/faktor;
+        if (rein) faktor =1/faktor;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         for(iFND=0;iFND<fundamente.length;iFND++) {
           for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
@@ -483,9 +483,9 @@
         }
       }
       if (e.keyCode==53){
-        zoooom(true)
+        zoom(true)
       }else {
-        zoooom(false);
+        zoom(false);
       }
     }
   }
