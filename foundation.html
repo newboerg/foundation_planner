@@ -470,23 +470,16 @@
     } else if (e.keyCode==50){ //Taste 2
       console.log(fundamente);
     } else if (e.keyCode==53 || e.keyCode==54){ //Taste + / -
-      // function zoom(rein =true){
-        var faktor =0.8;
-        if (rein) faktor =1/faktor;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for(iFND=0;iFND<fundamente.length;iFND++) {
-          for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
-            fundamente[iFND].p[iPkt].x = fundamente[iFND].p[iPkt].x * faktor;
-            fundamente[iFND].p[iPkt].y = fundamente[iFND].p[iPkt].y * faktor;
-          }
-          fundamente[iFND].zeichne("orange");
+      var faktor =0.8;
+      if (e.keyCode==53) faktor =1/faktor;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for(iFND=0;iFND<fundamente.length;iFND++) {
+        for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
+          fundamente[iFND].p[iPkt].x = fundamente[iFND].p[iPkt].x * faktor;
+          fundamente[iFND].p[iPkt].y = fundamente[iFND].p[iPkt].y * faktor;
         }
-      // }
-      // if (e.keyCode==53){
-      //   zoom(true)
-      // }else {
-      //   zoom(false);
-      // }
+        fundamente[iFND].zeichne("orange");
+      }
     }
   }
 
