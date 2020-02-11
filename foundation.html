@@ -470,7 +470,7 @@
     } else if (e.keyCode==50){ //Taste 2
       console.log(fundamente);
     } else if (e.keyCode==53 || e.keyCode==54){ //Taste + / -
-      function zoom(rein =true){
+      // function zoom(rein =true){
         var faktor =0.8;
         if (rein) faktor =1/faktor;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -481,12 +481,12 @@
           }
           fundamente[iFND].zeichne("orange");
         }
-      }
-      if (e.keyCode==53){
-        zoom(true)
-      }else {
-        zoom(false);
-      }
+      // }
+      // if (e.keyCode==53){
+      //   zoom(true)
+      // }else {
+      //   zoom(false);
+      // }
     }
   }
 
