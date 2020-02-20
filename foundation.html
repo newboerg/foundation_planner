@@ -14,17 +14,104 @@
   input{
     max-width: 30px;
   }
+  .mat{
+    border: 1px solid black;
+    display: inline-block;
+    height: 70px;
+    padding-right: 5px;
+  }
+  .mat:hover{
+    background-color: lightgrey;
+  }
+  input[type="text"]{
+    pointer-events: none;
+  }
+  #anleitung{
+    font-size: 50px;
+    border: 1px solid black;
+    display: inline-block;
+    height: 70px;
+    padding:0px;
+    margin: 0px;
+  }
+  .rand{
+    vertical-align: top;
+    float: right;
+  }
   </style>
 </head>
 <body>
-  <img src="img/viereck.png" alt="">
-  <input type="text" id="txtVierecke" value="0">
-  <img src="img/dreieck.png" alt=""><input type="text" id="txtDreiecke" value="0">
+  <label for="msand" class="mat" title="Sandstone">
+    <input type="radio" id="msand" name="material" value="0" checked onclick="material = this.value;">
+    <img src="img/viereckSandstone.png" alt="">
+    <input type="text" id="txtVierecke[0]" value="0" readonly onclick="this.parent.click();">
+    <img src="img/dreieckSandstone.png" alt="">
+    <input type="text" id="txtDreiecke[0]" value="0" readonly>
+  </label>
+  <label for="mziegel" class="mat" title="Bricks">
+    <input type="radio" id="mziegel" name="material" value="1" onclick="material = this.value;">
+    <img src="img/viereckZiegel.png" alt="">
+    <input type="text" id="txtVierecke[1]" value="0" readonly>
+    <img src="img/dreieckZiegel.png" alt="">
+    <input type="text" id="txtDreiecke[1]" value="0" readonly>
+  </label>
+  <label for="mHZiegel" class="mat" title="Hardened Stone">
+    <input type="radio" id="mHZiegel" name="material" value="2" onclick="material = this.value;">
+    <img src="img/viereckHZiegel.png" alt="">
+    <input type="text" id="txtVierecke[2]" value="0" readonly>
+    <img src="img/dreieckHZiegel.png" alt="">
+    <input type="text" id="txtDreiecke[2]" value="0" readonly>
+  </label>
+  <label for="meis" class="mat" title="Black Ice">
+    <input type="radio" id="meis" name="material" value="3" onclick="material = this.value;">
+    <img src="img/viereckEis.png" alt="">
+    <input type="text" id="txtVierecke[3]" value="0" readonly>
+    <img src="img/dreieckEis.png" alt="">
+    <input type="text" id="txtDreiecke[3]" value="0" readonly>
+  </label>
+  <label for="mholz" class="mat" title="Insulated Wood">
+    <input type="radio" id="mholz" name="material" value="4" onclick="material = this.value;">
+    <img src="img/viereckHolz.png" alt="">
+    <input type="text" id="txtVierecke[4]" value="0" readonly>
+    <img src="img/dreieckHolz.png" alt="">
+    <input type="text" id="txtDreiecke[4]" value="0" readonly>
+  </label>
+
+  <span id="anleitung" title="3/4 drücken zum anbauen,0 zum Löschen, 5/6 zum rein/raus zoomen">
+    &#128214;
+  </span>
   <input type="checkbox" id="debug" value="0"> DEBUG
-  
-  <div id="anleitung">3/4 drücken zum anbauen,0 zum Löschen, 5/6 zum rein/raus zoomen</div>
-  <canvas id="canvas" width="1000" height="1000"></canvas>
+  <canvas id="canvas" width="1200" height="850" title="3/4 drücken zum anbauen,0 zum Löschen, 5/6 zum rein/raus zoomen"></canvas>
+
+  <span class="rand"><b>Resources:</b> <br>
+    <img src="img/32px-Icon_wood-1.png" alt="wood"> <input type="text" id="txtWood" value="0" readonly>  <br>
+    <img src="img/32px-Icon_ingredient_plank.png" alt="plank"> <input type="text" id="txtPlank" value="0" readonly> <br>
+    <img src="img/32px-Icon_insultated_wood.png" alt="insulated Wood"> <input type="text" id="txtIWood" value="0" readonly> <br>
+    <img src="img/32px-Icon_stone-1.png" alt="stone"> <input type="text" id="txtStone" value="0" readonly> <br>
+    <img src="img/32px-Icon_ingredient_brick.png" alt="brick"> <input type="text" id="txtBrick" value="0" readonly> <br>
+    <img src="img/32px-Icon_ingredient_hardenedBrick.png" alt="hardenedBrick"> <input type="text" id="txtHBrick" value="0" readonly><br>
+    <img src="img/32px-Icon_ingredient_iron_reinforcement.png" alt="ironReinforcement"> <input type="text" id="txtIronRein" value="0" readonly><br>
+    <img src="img/32px-Icon_ingredient_steel_reinforcement.png" alt="steelReinforcement"> <input type="text" id="txtSteelRein" value="0" readonly><br>
+    <img src="img/32px-Icon_black_ice.png" alt="blackIce"> <input type="text" id="txtBlackIce" value="0" readonly>
+  </span>
   <script type="text/javascript">
+  var material = 0;
+  texturList = ["sandstone","ziegel","hZiegel","eis","holz"];
+  // texturList=["a","b","c","b","c"];
+  farbList =["orange","lightgrey","darkgrey","grey","brown"];
+
+  function berechneZeug(){
+    document.getElementById('txtWood').value = document.getElementById('txtVierecke[0]').value * 5 + document.getElementById('txtDreiecke[0]').value * 5;
+    document.getElementById('txtStone').value = document.getElementById('txtVierecke[0]').value * 35 + document.getElementById('txtDreiecke[0]').value * 32;
+    document.getElementById('txtBlackIce').value = document.getElementById('txtVierecke[3]').value * 15 + document.getElementById('txtDreiecke[3]').value * 14;
+    document.getElementById('txtBrick').value = document.getElementById('txtVierecke[1]').value * 10 + document.getElementById('txtDreiecke[1]').value * 9;
+    document.getElementById('txtHBrick').value = document.getElementById('txtVierecke[2]').value * 15 + document.getElementById('txtDreiecke[2]').value * 8;
+    document.getElementById('txtPlank').value = document.getElementById('txtVierecke[2]').value * 4 + document.getElementById('txtDreiecke[2]').value * 2 + document.getElementById('txtVierecke[1]').value * 4 + document.getElementById('txtDreiecke[1]').value * 4;
+    document.getElementById('txtIWood').value = document.getElementById('txtVierecke[3]').value * 4 + document.getElementById('txtDreiecke[3]').value * 4 + document.getElementById('txtVierecke[4]').value * 3 + document.getElementById('txtDreiecke[4]').value * 2;
+    document.getElementById('txtIronRein').value = document.getElementById('txtVierecke[4]').value * 5 + document.getElementById('txtDreiecke[4]').value * 4 + document.getElementById('txtVierecke[1]').value * 7 + document.getElementById('txtDreiecke[1]').value * 7;
+    document.getElementById('txtSteelRein').value = document.getElementById('txtVierecke[2]').value * 3 + document.getElementById('txtDreiecke[2]').value * 2 + document.getElementById('txtVierecke[3]').value * 3 + document.getElementById('txtDreiecke[3]').value * 3;
+  }
+
   function sound(src) {
     this.sound = document.createElement("audio");
     this.sound.src = src;
@@ -42,8 +129,8 @@
   var sndBau = new sound("snd/bau.mp3");
   var sndAbbruch = new sound("snd/abbruch.mp3");
   var debug = document.getElementById('debug').value;
-  var vierecke=0;
-  var dreiecke=0;
+  var vierecke=[0,0,0,0,0 ];
+  var dreiecke=[0,0,0,0,0 ];
   var sandstoneTextur= new Image();
   var pattern;
   sandstoneTextur.src = "img/sandstoneTextur.jpg";
@@ -85,17 +172,18 @@
     enabled =false;
     texturSrc;
     textur;
-    constructor(p0,p1,t=4,erzeuger=null,akt=0){
+    material=0;
+    constructor(p0,p1,t=4,erzeuger=null,akt=0,_mat=0){
       this.akt = akt;
-
+      this.material = _mat;
       if (t==3){
-        dreiecke++;
-        document.getElementById('txtDreiecke').value = dreiecke;
-        this.texturSrc= "img/sandstoneTextur2.jpg";
+        dreiecke[this.material]++;
+        document.getElementById('txtDreiecke['+material+']').value = dreiecke[material];
+        this.texturSrc= "img/"+texturList[material]+"Textur2.jpg";
       } else {
-        this.texturSrc= "img/sandstoneTextur.jpg";
-        vierecke++;
-        document.getElementById('txtVierecke').value = vierecke;
+        this.texturSrc= "img/"+texturList[material]+"Textur.jpg";
+        vierecke[this.material]++;
+        document.getElementById('txtVierecke['+material+']').value = vierecke[material];
       }
       this.typ = t;
       this.name = Math.random().toString(36).substring(2, 4)
@@ -154,8 +242,16 @@
         var v0 = UVMaps[t][pp[0]].y, v1 = UVMaps[t][pp[1]].y, v2 = UVMaps[t][pp[2]].y;
         // Set clipping area so that only pixels inside the triangle will
         // be affected by the image drawing operation
-        ctx.save(); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
-        ctx.lineTo(x2, y2); ctx.closePath(); ctx.clip();
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        if (this.enabled){
+          // ctx.stroke();
+        }
+        ctx.closePath();
+        ctx.clip();
 
         // Compute matrix transform
         var delta = u0*v1 + v0*u2 + u1*v2 - v1*u2 - v0*u1 - u0*v2;
@@ -177,17 +273,16 @@
       }
     }
 
-      zeichne(farbe="yellow",x=0,y=0){
+      zeichne(x=0,y=0){
       debug= document.getElementById('debug').checked;
       this.textur = new Image();
       this.textur.src = this.texturSrc;
       this.textur.addEventListener('load', e => {
-        ctx.globalAlpha=0.5;
+        // ctx.globalAlpha=0.5;
         this.textureMap();
-        ctx.globalAlpha=1.0;
+        // ctx.globalAlpha=1.0;
       });
 
-      // var tt= ffgg[4].x;
       ctx.beginPath();
       ctx.moveTo(this.p[0].x,this.p[0].y);
       ctx.lineTo(this.p[1].x,this.p[1].y);
@@ -203,18 +298,17 @@
         ctx.fillStyle = "red";
       } else {
         this.enabled=false;
-         ctx.fillStyle = farbe;
+         ctx.fillStyle = farbList[this.material];
         // ctx.fillStyle =pattern;
       }
       //Prüfe ob ein Punkt im Pfad liegt(dann überschneidung und neues Polygon weg.)
-      ctx.fill();
+       ctx.fill();
       ctx.lineWidth=1;
       ctx.strokeStyle="black";
       ctx.stroke();
       ctx.closePath();
 
       if(this.enabled){
-
 
         // console.log(this);
         ctx.strokeStyle = "yellow";
@@ -257,7 +351,7 @@
       var tp0 = new Punkt(this.p[0+this.akt].x,this.p[0+this.akt].y);
       var tp1 = new Punkt(this.p[(1+this.akt)%this.typ].x,this.p[(1+this.akt)%this.typ].y);
       // console.log(tp0);
-      var ret = new Fundament(tp1,tp0,t,this,this.akt);
+      var ret = new Fundament(tp1,tp0,t,this,this.akt,material);
       //this.nachbarn[this.akt] = ret;
       //this.anzNachbarn++;
       // console.log(this);
@@ -357,11 +451,11 @@
       });
       // console.log(ursprung);
       if (this.typ==3){
-        dreiecke--;
-        document.getElementById('txtDreiecke').value = dreiecke;
+        dreiecke[this.material]--;
+        document.getElementById('txtDreiecke['+this.material+']').value = dreiecke[this.material];
       } else {
-        vierecke--;
-        document.getElementById('txtVierecke').value = vierecke;
+        vierecke[this.material]--;
+        document.getElementById('txtVierecke['+this.material+']').value = vierecke[this.material];
       }
     }
   }
@@ -371,7 +465,8 @@
   var fundamente= [new Fundament(pp0,pp1,4)];
   fundamente[0].anzNachbarn =0;
 
-  fundamente[0].zeichne("orange");
+  fundamente[0].zeichne();
+  berechneZeug();
   // console.log(fundamente[0].istPunktDrin(pp0));
 
 
@@ -384,7 +479,7 @@
     i = 0;
     ctx.clearRect(0, 0, canvas.width, canvas.height); // for demo
     while (f = fundamente[i++]){
-      f.zeichne("orange",x,y);
+      f.zeichne(x,y);
     }
   };
   function doMouseDown(e){
@@ -402,7 +497,7 @@
         fundamente[iFND].p[iPkt].x = fundamente[iFND].p[iPkt].x -difX;
         fundamente[iFND].p[iPkt].y = fundamente[iFND].p[iPkt].y -difY;
       }
-      fundamente[iFND].zeichne("orange");
+      fundamente[iFND].zeichne();
     }
     // }
   }
@@ -413,6 +508,7 @@
     // console.log(e.keyCode);
     var i=0;
     var f = null
+
     if (e.keyCode>=51 && e.keyCode <= 52){ //Taste 3 oder 4
       while (f = fundamente[i++]){
         if (f.enabled){
@@ -442,7 +538,7 @@
             sndBau.play();
           }
         }
-        f.zeichne("orange");
+        f.zeichne();
       }
     } else if (e.keyCode <= 48) { //Taste 0
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -456,7 +552,7 @@
           ii=-1;
           //break;
         } else {
-          f.zeichne("orange");
+          f.zeichne();
         }
       }
       // console.log(fundamente);
@@ -477,9 +573,10 @@
           fundamente[iFND].p[iPkt].x = fundamente[iFND].p[iPkt].x * faktor;
           fundamente[iFND].p[iPkt].y = fundamente[iFND].p[iPkt].y * faktor;
         }
-        fundamente[iFND].zeichne("orange");
+        fundamente[iFND].zeichne();
       }
     }
+    berechneZeug();
   }
 
   </script>
