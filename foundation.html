@@ -35,6 +35,11 @@
     margin: 0px;
   }
   .rand{
+    background-color: orange;
+    opacity: 0.7;
+    position: absolute;
+    top:   100px;
+    right: 15px;
     vertical-align: top;
     float: right;
   }
@@ -83,7 +88,7 @@
   <input type="checkbox" id="debug" value="0"> DEBUG
   <canvas id="canvas" width="1200" height="850" title="3/4 drücken zum anbauen,0 zum Löschen, 5/6 zum rein/raus zoomen"></canvas>
 
-  <span class="rand"><b>Resources:</b> <br>
+  <div class="rand"><b>Resources:</b> <br>
     <img src="img/32px-Icon_wood-1.png" alt="wood"> <input type="text" id="txtWood" value="0" readonly>  <br>
     <img src="img/32px-Icon_ingredient_plank.png" alt="plank"> <input type="text" id="txtPlank" value="0" readonly> <br>
     <img src="img/32px-Icon_insultated_wood.png" alt="insulated Wood"> <input type="text" id="txtIWood" value="0" readonly> <br>
@@ -93,9 +98,10 @@
     <img src="img/32px-Icon_ingredient_iron_reinforcement.png" alt="ironReinforcement"> <input type="text" id="txtIronRein" value="0" readonly><br>
     <img src="img/32px-Icon_ingredient_steel_reinforcement.png" alt="steelReinforcement"> <input type="text" id="txtSteelRein" value="0" readonly><br>
     <img src="img/32px-Icon_black_ice.png" alt="blackIce"> <input type="text" id="txtBlackIce" value="0" readonly>
-  </span>
+  </div>
   <script type="text/javascript">
   var material = 0;
+  var zoomfaktor=1.0;
   texturList = ["sandstone","ziegel","hZiegel","eis","holz"];
   // texturList=["a","b","c","b","c"];
   farbList =["orange","lightgrey","darkgrey","grey","brown"];
@@ -126,6 +132,83 @@
       this.sound.pause();
     }
   }
+
+  function loesche(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (var ii=0; ii< fundamente.length;ii++){
+      f= fundamente[ii];
+      if (f.enabled){
+        sndAbbruch.play();
+        f.entferneFundament(fundamente);
+        fundamente.splice(ii,1);
+        ii=-1;
+      } else {
+        f.zeichne();
+      }
+    }
+  }
+  function baueAn(taste){
+    var f =null;
+    var i=0;
+    while (f = fundamente[i++]){
+
+      if (f.enabled){
+        var neuesFundament = f.erzeugeKind(taste - 48);
+        fundamente.push(neuesFundament);
+
+        var ueberscheidung =false
+        for(iFND=0;iFND<fundamente.length;iFND++) {
+          for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
+            // console.log(iFND + " " +iPkt + " " +fundamente[iFND].p[iPkt].x+"|"+fundamente[iFND].p[iPkt].y);
+            if(neuesFundament.istPunktDrin(fundamente[iFND].p[iPkt])){
+              console.log("das neue überlappt einen alten");
+              ueberscheidung=true;
+            };
+          }
+          for(iPkt=0;iPkt<neuesFundament.typ;iPkt++) {
+            if(fundamente[iFND].istPunktDrin(neuesFundament.p[iPkt])){
+              console.log("ein altes würde das neue überlappen");
+              ueberscheidung=true;
+            };
+          }
+        }
+        if (ueberscheidung){
+          fundamente[fundamente.length-1].entferneFundament(fundamente);
+          fundamente.pop();
+        } else {
+          sndBau.play();
+        }
+      }
+      f.zeichne();
+    }
+  }
+  function zoom(taste){
+    var faktor =0.8;
+    if (taste==53 || taste.deltaY<0) faktor =1/faktor;
+    zoomfaktor = zoomfaktor * faktor;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(iFND=0;iFND<fundamente.length;iFND++) {
+      for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
+        fundamente[iFND].p[iPkt].x = fundamente[iFND].p[iPkt].x * faktor;
+        fundamente[iFND].p[iPkt].y = fundamente[iFND].p[iPkt].y * faktor;
+      }
+      fundamente[iFND].zeichne();
+    }
+  }
+  function zoomNeu(mausrad,x,y){
+    var faktor =0.8;
+    if (mausrad.deltaY<0) faktor =1/faktor;
+    zoomfaktor = zoomfaktor * faktor;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(iFND=0;iFND<fundamente.length;iFND++) {
+      for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
+        fundamente[iFND].p[iPkt].x = x + (fundamente[iFND].p[iPkt].x -x) * faktor;
+        fundamente[iFND].p[iPkt].y = y + (fundamente[iFND].p[iPkt].y -y) * faktor;
+      }
+      fundamente[iFND].zeichne();
+    }
+  }
+
   var sndBau = new sound("snd/bau.mp3");
   var sndAbbruch = new sound("snd/abbruch.mp3");
   var debug = document.getElementById('debug').value;
@@ -173,7 +256,9 @@
     texturSrc;
     textur;
     material=0;
+    static anzahl=0;
     constructor(p0,p1,t=4,erzeuger=null,akt=0,_mat=0){
+
       this.akt = akt;
       this.material = _mat;
       if (t==3){
@@ -186,7 +271,8 @@
         document.getElementById('txtVierecke['+material+']').value = vierecke[material];
       }
       this.typ = t;
-      this.name = Math.random().toString(36).substring(2, 4)
+      // this.name = Math.random().toString(36).substring(2, 4)
+      this.name = "#" + parseInt(Fundament.anzahl++);
       this.nachbarn[0] = erzeuger;
       this.p[0] = p0;
       this.p[1] = p1;
@@ -273,13 +359,15 @@
       }
     }
 
-      zeichne(x=0,y=0){
+      zeichne(x=0,y=0,last=0){
       debug= document.getElementById('debug').checked;
       this.textur = new Image();
       this.textur.src = this.texturSrc;
       this.textur.addEventListener('load', e => {
         // ctx.globalAlpha=0.5;
-        this.textureMap();
+        if (!debug){
+          this.textureMap();
+        }
         // ctx.globalAlpha=1.0;
       });
 
@@ -293,7 +381,9 @@
       ctx.lineTo(this.p[0].x,this.p[0].y);
       if (ctx.isPointInPath(x, y) && this.anzNachbarn != this.typ){
         this.enabled=true;
-        this.setAkt(this.akt+1);
+        if(last!=0){
+          this.setAkt(this.akt+1);
+        }
         // console.log(this);
         ctx.fillStyle = "red";
       } else {
@@ -308,7 +398,7 @@
       ctx.stroke();
       ctx.closePath();
 
-      if(this.enabled){
+      if(this.enabled && last !=0){
 
         // console.log(this);
         ctx.strokeStyle = "yellow";
@@ -334,7 +424,9 @@
       }
       if (debug){
         ctx.fillStyle = "black";
+        ctx.font = "" + 7*zoomfaktor +"px Consolas" ;
         if (this.typ ===4){
+
           ctx.fillText(this.name,(this.p[0].x+this.p[1].x+this.p[2].x+this.p[2].x)/4-10,(this.p[0].y+this.p[1].y+this.p[2].y+this.p[3].y)/4);
         } else {
           ctx.fillText(this.name,(this.p[0].x+this.p[1].x+this.p[2].x)/3,(this.p[0].y+this.p[1].y+this.p[2].y)/3);
@@ -475,12 +567,15 @@
     // important: correct mouse position:
     var rect = this.getBoundingClientRect(),
     x = e.clientX - rect.left,
-    y = e.clientY - rect.top,
+    y = e.clientY  - rect.top,
     i = 0;
     ctx.clearRect(0, 0, canvas.width, canvas.height); // for demo
+    var roter = null;
     while (f = fundamente[i++]){
       f.zeichne(x,y);
+      if (f.enabled) roter = f;
     }
+     if (roter != null) roter.zeichne(x,y,1);
   };
   function doMouseDown(e){
     var rect = this.getBoundingClientRect();
@@ -504,78 +599,35 @@
   window.addEventListener( "keypress", doKeyDown, false )
   canvas.addEventListener("mousedown", doMouseDown);
   canvas.addEventListener("mouseup", doMouseUp);
+  canvas.addEventListener("wheel",doWheel);
+  function doWheel(e){
+    var rect = this.getBoundingClientRect(),
+    x = e.clientX - rect.left,
+    y = e.clientY  - rect.top;
+    zoomNeu(e,x,y)
+    e.stopPropagation();
+    e.preventDefault();
+    return false;
+  }
   function doKeyDown(e){
-    // console.log(e.keyCode);
-    var i=0;
-    var f = null
-
     if (e.keyCode>=51 && e.keyCode <= 52){ //Taste 3 oder 4
-      while (f = fundamente[i++]){
-        if (f.enabled){
-          var neuesFundament = f.erzeugeKind(e.keyCode - 48);
-          fundamente.push(neuesFundament);
-
-          var ueberscheidung =false
-          for(iFND=0;iFND<fundamente.length;iFND++) {
-            for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
-              // console.log(iFND + " " +iPkt + " " +fundamente[iFND].p[iPkt].x+"|"+fundamente[iFND].p[iPkt].y);
-              if(neuesFundament.istPunktDrin(fundamente[iFND].p[iPkt])){
-                console.log("das neue überlappt einen alten");
-                ueberscheidung=true;
-              };
-            }
-            for(iPkt=0;iPkt<neuesFundament.typ;iPkt++) {
-              if(fundamente[iFND].istPunktDrin(neuesFundament.p[iPkt])){
-                console.log("ein altes würde das neue überlappen");
-                ueberscheidung=true;
-              };
-            }
-          }
-          if (ueberscheidung){
-            fundamente[fundamente.length-1].entferneFundament(fundamente);
-            fundamente.pop();
-          } else {
-            sndBau.play();
-          }
-        }
-        f.zeichne();
-      }
+      baueAn(e.keyCode);
     } else if (e.keyCode <= 48) { //Taste 0
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (var ii=0; ii< fundamente.length;ii++){
-        f= fundamente[ii];
-        if (f.enabled){
-          sndAbbruch.play();
-          f.entferneFundament(fundamente);
-          fundamente.splice(ii,1);
-          // console.log("lösche " + ii);
-          ii=-1;
-          //break;
-        } else {
-          f.zeichne();
-        }
-      }
-      // console.log(fundamente);
+      loesche();
     }else if (e.keyCode==49){ //Taste 1
-      while (f = fundamente[i++]){
-        if (f.enabled){
-          console.log(f);
+      fundamente.forEach((item, i) => {
+        if (item.enabled){
+          console.log(item);
         }
-      }
+      });
     } else if (e.keyCode==50){ //Taste 2
       console.log(fundamente);
     } else if (e.keyCode==53 || e.keyCode==54){ //Taste + / -
-      var faktor =0.8;
-      if (e.keyCode==53) faktor =1/faktor;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for(iFND=0;iFND<fundamente.length;iFND++) {
-        for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
-          fundamente[iFND].p[iPkt].x = fundamente[iFND].p[iPkt].x * faktor;
-          fundamente[iFND].p[iPkt].y = fundamente[iFND].p[iPkt].y * faktor;
-        }
-        fundamente[iFND].zeichne();
-      }
+      zoom(e.keyCode);
     }
+
+
+
     berechneZeug();
   }
 
