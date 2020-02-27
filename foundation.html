@@ -89,7 +89,9 @@
   <br>
   <input type="checkbox" id="debug" value="0"> DEBUG
   <button type="button" name="button" onclick="downloadObjectAsJson(befehlsListe,'foundation');">Export</button>
+  <button type="button" name="buttonSave" onclick="speicherCookie()">Save to Cookie</button>
   Import:<input type="file" id="importDatei" value="">
+  <button type="button" name="button2" onclick="allesNeu();">Clear</button>
   <canvas id="canvas" width="1200" height="850" title="3/4 drücken zum anbauen,0 zum Löschen, 5/6 zum rein/raus zoomen"></canvas>
 
   <div class="rand"><b>Resources:</b> <br>
@@ -138,12 +140,14 @@
     }
   }
 
-  function loesche(){
+  function loesche(sound=false){
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (var ii=0; ii< fundamente.length;ii++){
       f= fundamente[ii];
       if (f.enabled){
-        sndAbbruch.play();
+        if(sound){
+          sndAbbruch.play();
+        }
         befehlsListe.push([
           f.lfdNr,
           0,
@@ -158,7 +162,7 @@
       }
     }
   }
-  function baueAn(taste){
+  function baueAn(taste,sound=false){
     var f =null;
     var i=0;
     while (f = fundamente[i++]){
@@ -188,7 +192,9 @@
           fundamente[fundamente.length-1].entferneFundament(fundamente);
           fundamente.pop();
         } else {
-          sndBau.play();
+          if(sound){
+            sndBau.play();
+          }
           befehlsListe.push([
             f.lfdNr,
             f.akt,
@@ -640,9 +646,9 @@
     }
     function doKeyDown(e){
       if (e.keyCode>=51 && e.keyCode <= 52){ //Taste 3 oder 4
-        baueAn(e.keyCode);
+        baueAn(e.keyCode,true);
       } else if (e.keyCode <= 48) { //Taste 0
-        loesche();
+        loesche(true);
       }else if (e.keyCode==49){ //Taste 1
         fundamente.forEach((item, i) => {
           if (item.enabled){
@@ -658,15 +664,39 @@
         console.log(myJSON);
         downloadObjectAsJson(befehlsListe,"foundation");
       }else if (e.keyCode==56){ //Taste 8
-        var myJSON = JSON.stringify(befehlsListe);
-        var val = btoa(myJSON)
-        console.log(val);
-        document.cookie = "json=" + val;
+        speicherCookie();
 
       }
 
 
       berechneZeug();
+    }
+    function setCookie(cname, cvalue, exdays) {
+      var d = new Date();
+      d.setTime(d.getTime() + (exdays*24*60*60*1000));
+      var expires = "expires="+ d.toUTCString();
+      document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+    }
+    function getCookie(cname) {
+      var name = cname + "=";
+      var decodedCookie = decodeURIComponent(document.cookie);
+      var ca = decodedCookie.split(';');
+      for(var i = 0; i <ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == ' ') {
+          c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+          return c.substring(name.length, c.length);
+        }
+      }
+      return "";
+    }
+    function speicherCookie(){
+      var myJSON = JSON.stringify(befehlsListe);
+      var val = btoa(myJSON)
+      console.log(val);
+      setCookie("json",val,365);
     }
     function downloadObjectAsJson(exportObj, exportName){
       var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
@@ -679,6 +709,12 @@
     }
     function sleep(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    function allesNeu(){
+      if (confirm("Are you sure?")){
+        bootUp();
+        speicherCookie();
+      }
     }
     async function importiereJSON(obj){
       bootUp();
@@ -711,6 +747,15 @@
       }
       material=merkMat;
     }
+    function leseCookieBefehle(){
+      var val = getCookie("json");
+      console.log(val);
+      if (val != ""){
+       // val="W1swLDAsMCw0XSxbMCwxLDAsNF0sWzEsMiwwLDRdXQ==";
+        val = atob(val);
+        importiereJSON(JSON.parse(val));
+     }
+    }
 
     (function(){
       function onChange(event) {
@@ -725,7 +770,9 @@
       }
       document.getElementById('importDatei').addEventListener('change', onChange);
     }());
+    setInterval(function(){speicherCookie();},30000);
 
+    leseCookieBefehle();
     </script>
   </body>
   </html>
