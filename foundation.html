@@ -12,7 +12,7 @@
     height: 50px;
   }
   input{
-    max-width: 30px;
+
   }
   .mat{
     border: 1px solid black;
@@ -24,6 +24,7 @@
     background-color: lightgrey;
   }
   input[type="text"]{
+    max-width: 30px;
     pointer-events: none;
   }
   #anleitung{
@@ -35,6 +36,11 @@
     margin: 0px;
   }
   .rand{
+    background-color: orange;
+    opacity: 0.7;
+    position: absolute;
+    top:   100px;
+    right: 15px;
     vertical-align: top;
     float: right;
   }
@@ -80,10 +86,15 @@
   <span id="anleitung" title="3/4 drücken zum anbauen,0 zum Löschen, 5/6 zum rein/raus zoomen">
     &#128214;
   </span>
+  <br>
   <input type="checkbox" id="debug" value="0"> DEBUG
+  <button type="button" name="button" onclick="downloadObjectAsJson(befehlsListe,'foundation');">Export</button>
+  <button type="button" name="buttonSave" onclick="speicherCookie()">Save to Cookie</button>
+  Import:<input type="file" id="importDatei" value="">
+  <button type="button" name="button2" onclick="allesNeu();">Clear</button>
   <canvas id="canvas" width="1200" height="850" title="3/4 drücken zum anbauen,0 zum Löschen, 5/6 zum rein/raus zoomen"></canvas>
 
-  <span class="rand"><b>Resources:</b> <br>
+  <div class="rand"><b>Resources:</b> <br>
     <img src="img/32px-Icon_wood-1.png" alt="wood"> <input type="text" id="txtWood" value="0" readonly>  <br>
     <img src="img/32px-Icon_ingredient_plank.png" alt="plank"> <input type="text" id="txtPlank" value="0" readonly> <br>
     <img src="img/32px-Icon_insultated_wood.png" alt="insulated Wood"> <input type="text" id="txtIWood" value="0" readonly> <br>
@@ -93,13 +104,15 @@
     <img src="img/32px-Icon_ingredient_iron_reinforcement.png" alt="ironReinforcement"> <input type="text" id="txtIronRein" value="0" readonly><br>
     <img src="img/32px-Icon_ingredient_steel_reinforcement.png" alt="steelReinforcement"> <input type="text" id="txtSteelRein" value="0" readonly><br>
     <img src="img/32px-Icon_black_ice.png" alt="blackIce"> <input type="text" id="txtBlackIce" value="0" readonly>
-  </span>
+  </div>
   <script type="text/javascript">
   var material = 0;
+  var zoomfaktor=1.0;
   texturList = ["sandstone","ziegel","hZiegel","eis","holz"];
   // texturList=["a","b","c","b","c"];
   farbList =["orange","lightgrey","darkgrey","grey","brown"];
-
+  var fundamente;
+  var befehlsListe;
   function berechneZeug(){
     document.getElementById('txtWood').value = document.getElementById('txtVierecke[0]').value * 5 + document.getElementById('txtDreiecke[0]').value * 5;
     document.getElementById('txtStone').value = document.getElementById('txtVierecke[0]').value * 35 + document.getElementById('txtDreiecke[0]').value * 32;
@@ -126,13 +139,107 @@
       this.sound.pause();
     }
   }
+
+  function loesche(sound=false){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (var ii=0; ii< fundamente.length;ii++){
+      f= fundamente[ii];
+      if (f.enabled){
+        if(sound){
+          sndAbbruch.play();
+        }
+        befehlsListe.push([
+          f.lfdNr,
+          0,
+          0,
+          0
+        ]);
+        f.entferneFundament(fundamente);
+        fundamente.splice(ii,1);
+        ii=-1;
+      } else {
+        f.zeichne();
+      }
+    }
+  }
+  function baueAn(taste,sound=false){
+    var f =null;
+    var i=0;
+    while (f = fundamente[i++]){
+
+      if (f.enabled){
+        var neuesFundament = f.erzeugeKind(taste - 48);
+
+        fundamente.push(neuesFundament);
+
+        var ueberscheidung =false
+        for(iFND=0;iFND<fundamente.length;iFND++) {
+          for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
+            // console.log(iFND + " " +iPkt + " " +fundamente[iFND].p[iPkt].x+"|"+fundamente[iFND].p[iPkt].y);
+            if(neuesFundament.istPunktDrin(fundamente[iFND].p[iPkt])){
+              console.log("das neue überlappt einen alten");
+              ueberscheidung=true;
+            };
+          }
+          for(iPkt=0;iPkt<neuesFundament.typ;iPkt++) {
+            if(fundamente[iFND].istPunktDrin(neuesFundament.p[iPkt])){
+              console.log("ein altes würde das neue überlappen");
+              ueberscheidung=true;
+            };
+          }
+        }
+        if (ueberscheidung){
+          fundamente[fundamente.length-1].entferneFundament(fundamente);
+          fundamente.pop();
+        } else {
+          if(sound){
+            sndBau.play();
+          }
+          befehlsListe.push([
+            f.lfdNr,
+            f.akt,
+            material-0,
+            taste - 48
+          ])
+        }
+      }
+      f.zeichne();
+    }
+  }
+  function zoom(taste){
+    var faktor =0.8;
+    if (taste==53 || taste.deltaY<0) faktor =1/faktor;
+    zoomfaktor = zoomfaktor * faktor;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(iFND=0;iFND<fundamente.length;iFND++) {
+      for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
+        fundamente[iFND].p[iPkt].x = fundamente[iFND].p[iPkt].x * faktor;
+        fundamente[iFND].p[iPkt].y = fundamente[iFND].p[iPkt].y * faktor;
+      }
+      fundamente[iFND].zeichne();
+    }
+  }
+  function zoomNeu(mausrad,x,y){
+    var faktor =0.8;
+    if (mausrad.deltaY<0) faktor =1/faktor;
+    zoomfaktor = zoomfaktor * faktor;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(iFND=0;iFND<fundamente.length;iFND++) {
+      for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
+        fundamente[iFND].p[iPkt].x = x + (fundamente[iFND].p[iPkt].x -x) * faktor;
+        fundamente[iFND].p[iPkt].y = y + (fundamente[iFND].p[iPkt].y -y) * faktor;
+      }
+      fundamente[iFND].zeichne();
+    }
+  }
+
   var sndBau = new sound("snd/bau.mp3");
   var sndAbbruch = new sound("snd/abbruch.mp3");
   var debug = document.getElementById('debug').value;
   var vierecke=[0,0,0,0,0 ];
   var dreiecke=[0,0,0,0,0 ];
   var sandstoneTextur= new Image();
-  var pattern;
+
   sandstoneTextur.src = "img/sandstoneTextur.jpg";
   sandstoneTextur.onload = function() {
     // console.log("bam");
@@ -173,7 +280,10 @@
     texturSrc;
     textur;
     material=0;
+    static anzahl=0;
+    lfdNr=0;
     constructor(p0,p1,t=4,erzeuger=null,akt=0,_mat=0){
+
       this.akt = akt;
       this.material = _mat;
       if (t==3){
@@ -186,7 +296,9 @@
         document.getElementById('txtVierecke['+material+']').value = vierecke[material];
       }
       this.typ = t;
-      this.name = Math.random().toString(36).substring(2, 4)
+      // this.name = Math.random().toString(36).substring(2, 4)
+      this.name = "#" + parseInt(Fundament.anzahl);
+      this.lfdNr = Fundament.anzahl++;
       this.nachbarn[0] = erzeuger;
       this.p[0] = p0;
       this.p[1] = p1;
@@ -223,6 +335,9 @@
       if (this.anzNachbarn == this.typ) return;
       this.akt=a%this.typ;
       if (this.nachbarn[this.akt] != null) this.setAkt(this.akt+1);
+    }
+    static setAnzahl(n){
+      Fundament.anzahl =n;
     }
 
     textureMap() {
@@ -266,319 +381,398 @@
 
         // Draw the transformed image
         ctx.transform(delta_a/delta, delta_d/delta,
-        delta_b/delta, delta_e/delta,
-        delta_c/delta, delta_f/delta);
-        ctx.drawImage(texture, 0, 0);
-        ctx.restore();
-      }
-    }
-
-      zeichne(x=0,y=0){
-      debug= document.getElementById('debug').checked;
-      this.textur = new Image();
-      this.textur.src = this.texturSrc;
-      this.textur.addEventListener('load', e => {
-        // ctx.globalAlpha=0.5;
-        this.textureMap();
-        // ctx.globalAlpha=1.0;
-      });
-
-      ctx.beginPath();
-      ctx.moveTo(this.p[0].x,this.p[0].y);
-      ctx.lineTo(this.p[1].x,this.p[1].y);
-      ctx.lineTo(this.p[2].x,this.p[2].y);
-      if (this.typ ===4){
-        ctx.lineTo(this.p[3].x,this.p[3].y);
-      }
-      ctx.lineTo(this.p[0].x,this.p[0].y);
-      if (ctx.isPointInPath(x, y) && this.anzNachbarn != this.typ){
-        this.enabled=true;
-        this.setAkt(this.akt+1);
-        // console.log(this);
-        ctx.fillStyle = "red";
-      } else {
-        this.enabled=false;
-         ctx.fillStyle = farbList[this.material];
-        // ctx.fillStyle =pattern;
-      }
-      //Prüfe ob ein Punkt im Pfad liegt(dann überschneidung und neues Polygon weg.)
-       ctx.fill();
-      ctx.lineWidth=1;
-      ctx.strokeStyle="black";
-      ctx.stroke();
-      ctx.closePath();
-
-      if(this.enabled){
-
-        // console.log(this);
-        ctx.strokeStyle = "yellow";
-        ctx.beginPath();
-        ctx.moveTo(this.p[0+this.akt].x,this.p[0+this.akt].y);
-        ctx.lineTo(this.p[(1+this.akt)%this.typ].x,this.p[(1+this.akt)%this.typ].y);
-        ctx.lineWidth=5;
-        ctx.stroke();
-        if (debug){
-          ctx.fillStyle = "black";
-          ctx.fillText("P0("+Math.floor(this.p[0].x)+";"+Math.floor(this.p[0].y)+")",this.p[0].x,this.p[0].y);
-          ctx.fillText("P1("+Math.floor(this.p[1].x)+";"+Math.floor(this.p[1].y)+")",this.p[1].x,this.p[1].y);
-          ctx.fillText("P2("+Math.floor(this.p[2].x)+";"+Math.floor(this.p[2].y)+")",this.p[2].x,this.p[2].y);
-          if (this.typ ===4){
-            ctx.fillText("P3("+Math.floor(this.p[3].x)+";"+Math.floor(this.p[3].y)+")",this.p[3].x,this.p[3].y);
-            ctx.fillText(this.name + " " + this.akt,(this.p[0].x+this.p[1].x+this.p[2].x+this.p[2].x)/4-10,(this.p[0].y+this.p[1].y+this.p[2].y+this.p[3].y)/4);
-          } else {
-            ctx.fillText(this.name + " " + this.akt,(this.p[0].x+this.p[1].x+this.p[2].x)/3,(this.p[0].y+this.p[1].y+this.p[2].y)/3);
-
-          }
-        }
-
-      }
-      if (debug){
-        ctx.fillStyle = "black";
-        if (this.typ ===4){
-          ctx.fillText(this.name,(this.p[0].x+this.p[1].x+this.p[2].x+this.p[2].x)/4-10,(this.p[0].y+this.p[1].y+this.p[2].y+this.p[3].y)/4);
-        } else {
-          ctx.fillText(this.name,(this.p[0].x+this.p[1].x+this.p[2].x)/3,(this.p[0].y+this.p[1].y+this.p[2].y)/3);
-
+          delta_b/delta, delta_e/delta,
+          delta_c/delta, delta_f/delta);
+          ctx.drawImage(texture, 0, 0);
+          ctx.restore();
         }
       }
 
-
-
-    }
-
-    erzeugeKind(t=4){
-      // console.log(this);
-      var tp0 = new Punkt(this.p[0+this.akt].x,this.p[0+this.akt].y);
-      var tp1 = new Punkt(this.p[(1+this.akt)%this.typ].x,this.p[(1+this.akt)%this.typ].y);
-      // console.log(tp0);
-      var ret = new Fundament(tp1,tp0,t,this,this.akt,material);
-      //this.nachbarn[this.akt] = ret;
-      //this.anzNachbarn++;
-      // console.log(this);
-      // console.log(ret);
-      function findeKante(p1,p2){
-        var ret;
-        //Die Reihenfolge ist wichtig zur bestimmung der Kante!
-        if (p1 ==0 && p2 ==1) ret = 0;
-        if (p1 ==1 && p2 ==2) ret = 1;
-        if (p1 ==2 && p2 ==0) ret = 2;
-        if (p1 ==2 && p2 ==3) ret = 2;
-        if (p1 ==3 && p2 ==0) ret = 3;
-        if (p1 ==1 && p2 ==0) ret = 0;
-        if (p1 ==2 && p2 ==1) ret = 1;
-        if (p1 ==0 && p2 ==2) ret = 2;
-        if (p1 ==3 && p2 ==2) ret = 2;
-        if (p1 ==0 && p2 ==3) ret = 3;
-        return ret;
-      }
-
-      for (var i =0; i< fundamente.length;i++){
-        var funde=0;
-        var kante_alt=0,kante_neu=0;
-        //console.log(i);
-        for (var j =0; j< fundamente[i].typ;j++){
-          //console.log(j);
-          for (var k =0; k< ret.typ;k++){
-            // console.log(k);
-            // console.log(vergleichePunkt(ret.p[k], fundamente[i].p[j]));
-            if (vergleichePunkt(ret.p[k], fundamente[i].p[j])){
-              funde++;
-              // console.log("i"+i+" j:"+j +" k:" +k+ "funde:"+funde);
-              // console.log(ret.p[k]);
-              if (funde==1){
-                kante_alt = j;
-                kante_neu = k;
-              } else if (funde ==2 ) {
-                kante_neu=findeKante(kante_neu,k);
-                kante_alt=findeKante(kante_alt,j);
-              }
-              // console.log("Kante:"+kante_alt);
-              // console.log("Kante:"+kante_neu);
-            }
-
-
+      zeichne(x=0,y=0,last=0){
+        debug= document.getElementById('debug').checked;
+        this.textur = new Image();
+        this.textur.src = this.texturSrc;
+        this.textur.addEventListener('load', e => {
+          // ctx.globalAlpha=0.5;
+          if (!debug){
+            this.textureMap();
           }
-          if (funde == 2){
-            fundamente[i].nachbarn[kante_alt] = ret;
-            fundamente[i].anzNachbarn++;
-            ret.anzNachbarn++;
-            if (kante_neu!=0){ //Der Erzeuger ist schon bekannt!
-              ret.nachbarn[kante_neu] = fundamente[i].nachbarn[kante_alt];
-            }
-            funde=0;
-            // console.log("i:"+i +"k: "+kante_alt+ "   "+ret.name+  " und " + fundamente[i].name +" sind Nachbarn");
-          }
-        }
-      }
-
-      return ret;
-    }
-    istPunktDrin(punkt){
-      var ret = false;
-      ctx.beginPath();
-      ctx.moveTo(this.p[0].x,this.p[0].y)
-      for (var i=1; i < this.typ;i++){
-        ctx.lineTo(this.p[i].x,this.p[i].y)
-      }
-      ret = ctx.isPointInPath(punkt.x,punkt.y);
-      ctx.closePath();
-      if (ret){
-        this.p.forEach((item, i) => {
-
-          if(vergleichePunkt(item,punkt)){
-            // console.log(punkt);
-            // console.log(item);
-            ret = false;
-          }
+          // ctx.globalAlpha=1.0;
         });
 
-      }
-      return ret;
-    }
-    entferneFundament(){
-      //var ursprung = this.nachbarn[0];
-      this.nachbarn.forEach((ursprung, i) => {
-        if(ursprung!=null){
-          for (var jj=0;jj<ursprung.typ;jj++){
-
-            if ( ursprung.nachbarn[jj] == this){
-              ursprung.nachbarn[jj] = null;
-            }
-          }
-          ursprung.anzNachbarn--;
+        ctx.beginPath();
+        ctx.moveTo(this.p[0].x,this.p[0].y);
+        ctx.lineTo(this.p[1].x,this.p[1].y);
+        ctx.lineTo(this.p[2].x,this.p[2].y);
+        if (this.typ ===4){
+          ctx.lineTo(this.p[3].x,this.p[3].y);
         }
-
-      });
-      // console.log(ursprung);
-      if (this.typ==3){
-        dreiecke[this.material]--;
-        document.getElementById('txtDreiecke['+this.material+']').value = dreiecke[this.material];
-      } else {
-        vierecke[this.material]--;
-        document.getElementById('txtVierecke['+this.material+']').value = vierecke[this.material];
-      }
-    }
-  }
-  var pp0 = new Punkt(200,200);
-  var pp1 = new Punkt(250,200);
-  var pp2 = new Punkt(225,225);
-  var fundamente= [new Fundament(pp0,pp1,4)];
-  fundamente[0].anzNachbarn =0;
-
-  fundamente[0].zeichne();
-  berechneZeug();
-  // console.log(fundamente[0].istPunktDrin(pp0));
-
-
-
-  canvas.onclick = function(e) {
-    // important: correct mouse position:
-    var rect = this.getBoundingClientRect(),
-    x = e.clientX - rect.left,
-    y = e.clientY - rect.top,
-    i = 0;
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // for demo
-    while (f = fundamente[i++]){
-      f.zeichne(x,y);
-    }
-  };
-  function doMouseDown(e){
-    var rect = this.getBoundingClientRect();
-    canvas.merkMausX = e.clientX - rect.left;
-    canvas.merkMausY = e.clientY - rect.top;
-  }
-  function doMouseUp(e){
-    var rect = this.getBoundingClientRect();
-    var difX = canvas.merkMausX - e.clientX + rect.left;
-    var difY = canvas.merkMausY - e.clientY + rect.top;
-    // if ( difX<=-5 && difX>=5 || difY<=-5 && difY>=5){
-    for(iFND=0;iFND<fundamente.length;iFND++) {
-      for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
-        fundamente[iFND].p[iPkt].x = fundamente[iFND].p[iPkt].x -difX;
-        fundamente[iFND].p[iPkt].y = fundamente[iFND].p[iPkt].y -difY;
-      }
-      fundamente[iFND].zeichne();
-    }
-    // }
-  }
-  window.addEventListener( "keypress", doKeyDown, false )
-  canvas.addEventListener("mousedown", doMouseDown);
-  canvas.addEventListener("mouseup", doMouseUp);
-  function doKeyDown(e){
-    // console.log(e.keyCode);
-    var i=0;
-    var f = null
-
-    if (e.keyCode>=51 && e.keyCode <= 52){ //Taste 3 oder 4
-      while (f = fundamente[i++]){
-        if (f.enabled){
-          var neuesFundament = f.erzeugeKind(e.keyCode - 48);
-          fundamente.push(neuesFundament);
-
-          var ueberscheidung =false
-          for(iFND=0;iFND<fundamente.length;iFND++) {
-            for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
-              // console.log(iFND + " " +iPkt + " " +fundamente[iFND].p[iPkt].x+"|"+fundamente[iFND].p[iPkt].y);
-              if(neuesFundament.istPunktDrin(fundamente[iFND].p[iPkt])){
-                console.log("das neue überlappt einen alten");
-                ueberscheidung=true;
-              };
-            }
-            for(iPkt=0;iPkt<neuesFundament.typ;iPkt++) {
-              if(fundamente[iFND].istPunktDrin(neuesFundament.p[iPkt])){
-                console.log("ein altes würde das neue überlappen");
-                ueberscheidung=true;
-              };
-            }
+        ctx.lineTo(this.p[0].x,this.p[0].y);
+        if (ctx.isPointInPath(x, y) && this.anzNachbarn != this.typ){
+          this.enabled=true;
+          if(last!=0){
+            this.setAkt(this.akt+1);
           }
-          if (ueberscheidung){
-            fundamente[fundamente.length-1].entferneFundament(fundamente);
-            fundamente.pop();
-          } else {
-            sndBau.play();
-          }
-        }
-        f.zeichne();
-      }
-    } else if (e.keyCode <= 48) { //Taste 0
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (var ii=0; ii< fundamente.length;ii++){
-        f= fundamente[ii];
-        if (f.enabled){
-          sndAbbruch.play();
-          f.entferneFundament(fundamente);
-          fundamente.splice(ii,1);
-          // console.log("lösche " + ii);
-          ii=-1;
-          //break;
+          // console.log(this);
+          ctx.fillStyle = "red";
         } else {
-          f.zeichne();
+          this.enabled=false;
+          ctx.fillStyle = farbList[this.material];
+          // ctx.fillStyle =pattern;
+        }
+        //Prüfe ob ein Punkt im Pfad liegt(dann überschneidung und neues Polygon weg.)
+        ctx.fill();
+        ctx.lineWidth=1;
+        ctx.strokeStyle="black";
+        ctx.stroke();
+        ctx.closePath();
+
+        if(this.enabled && last !=0){
+
+          // console.log(this);
+          ctx.strokeStyle = "yellow";
+          ctx.beginPath();
+          ctx.moveTo(this.p[0+this.akt].x,this.p[0+this.akt].y);
+          ctx.lineTo(this.p[(1+this.akt)%this.typ].x,this.p[(1+this.akt)%this.typ].y);
+          ctx.lineWidth=5;
+          ctx.stroke();
+          if (debug){
+            ctx.fillStyle = "black";
+            ctx.fillText("P0("+Math.floor(this.p[0].x)+";"+Math.floor(this.p[0].y)+")",this.p[0].x,this.p[0].y);
+            ctx.fillText("P1("+Math.floor(this.p[1].x)+";"+Math.floor(this.p[1].y)+")",this.p[1].x,this.p[1].y);
+            ctx.fillText("P2("+Math.floor(this.p[2].x)+";"+Math.floor(this.p[2].y)+")",this.p[2].x,this.p[2].y);
+            if (this.typ ===4){
+              ctx.fillText("P3("+Math.floor(this.p[3].x)+";"+Math.floor(this.p[3].y)+")",this.p[3].x,this.p[3].y);
+              ctx.fillText(this.name + " " + this.akt,(this.p[0].x+this.p[1].x+this.p[2].x+this.p[2].x)/4-10,(this.p[0].y+this.p[1].y+this.p[2].y+this.p[3].y)/4);
+            } else {
+              ctx.fillText(this.name + " " + this.akt,(this.p[0].x+this.p[1].x+this.p[2].x)/3,(this.p[0].y+this.p[1].y+this.p[2].y)/3);
+
+            }
+          }
+
+        }
+        if (debug){
+          ctx.fillStyle = "black";
+          ctx.font = "" + 7*zoomfaktor +"px Consolas" ;
+          if (this.typ ===4){
+
+            ctx.fillText(this.name,(this.p[0].x+this.p[1].x+this.p[2].x+this.p[2].x)/4-10,(this.p[0].y+this.p[1].y+this.p[2].y+this.p[3].y)/4);
+          } else {
+            ctx.fillText(this.name,(this.p[0].x+this.p[1].x+this.p[2].x)/3,(this.p[0].y+this.p[1].y+this.p[2].y)/3);
+
+          }
+        }
+
+
+
+      }
+
+      erzeugeKind(t=4){
+        // console.log(this);
+        var tp0 = new Punkt(this.p[0+this.akt].x,this.p[0+this.akt].y);
+        var tp1 = new Punkt(this.p[(1+this.akt)%this.typ].x,this.p[(1+this.akt)%this.typ].y);
+        // console.log(tp0);
+        var ret = new Fundament(tp1,tp0,t,this,this.akt,material);
+        //this.nachbarn[this.akt] = ret;
+        //this.anzNachbarn++;
+        // console.log(this);
+        // console.log(ret);
+        function findeKante(p1,p2){
+          var ret;
+          //Die Reihenfolge ist wichtig zur bestimmung der Kante!
+          if (p1 ==0 && p2 ==1) ret = 0;
+          if (p1 ==1 && p2 ==2) ret = 1;
+          if (p1 ==2 && p2 ==0) ret = 2;
+          if (p1 ==2 && p2 ==3) ret = 2;
+          if (p1 ==3 && p2 ==0) ret = 3;
+          if (p1 ==1 && p2 ==0) ret = 0;
+          if (p1 ==2 && p2 ==1) ret = 1;
+          if (p1 ==0 && p2 ==2) ret = 2;
+          if (p1 ==3 && p2 ==2) ret = 2;
+          if (p1 ==0 && p2 ==3) ret = 3;
+          return ret;
+        }
+
+        for (var i =0; i< fundamente.length;i++){
+          var funde=0;
+          var kante_alt=0,kante_neu=0;
+          //console.log(i);
+          for (var j =0; j< fundamente[i].typ;j++){
+            //console.log(j);
+            for (var k =0; k< ret.typ;k++){
+              // console.log(k);
+              // console.log(vergleichePunkt(ret.p[k], fundamente[i].p[j]));
+              if (vergleichePunkt(ret.p[k], fundamente[i].p[j])){
+                funde++;
+                // console.log("i"+i+" j:"+j +" k:" +k+ "funde:"+funde);
+                // console.log(ret.p[k]);
+                if (funde==1){
+                  kante_alt = j;
+                  kante_neu = k;
+                } else if (funde ==2 ) {
+                  kante_neu=findeKante(kante_neu,k);
+                  kante_alt=findeKante(kante_alt,j);
+                }
+                // console.log("Kante:"+kante_alt);
+                // console.log("Kante:"+kante_neu);
+              }
+
+
+            }
+            if (funde == 2){
+              fundamente[i].nachbarn[kante_alt] = ret;
+              fundamente[i].anzNachbarn++;
+              ret.anzNachbarn++;
+              if (kante_neu!=0){ //Der Erzeuger ist schon bekannt!
+                ret.nachbarn[kante_neu] = fundamente[i].nachbarn[kante_alt];
+              }
+              funde=0;
+              // console.log("i:"+i +"k: "+kante_alt+ "   "+ret.name+  " und " + fundamente[i].name +" sind Nachbarn");
+            }
+          }
+        }
+
+        return ret;
+      }
+      istPunktDrin(punkt){
+        var ret = false;
+        ctx.beginPath();
+        ctx.moveTo(this.p[0].x,this.p[0].y)
+        for (var i=1; i < this.typ;i++){
+          ctx.lineTo(this.p[i].x,this.p[i].y)
+        }
+        ret = ctx.isPointInPath(punkt.x,punkt.y);
+        ctx.closePath();
+        if (ret){
+          this.p.forEach((item, i) => {
+
+            if(vergleichePunkt(item,punkt)){
+              // console.log(punkt);
+              // console.log(item);
+              ret = false;
+            }
+          });
+
+        }
+        return ret;
+      }
+      entferneFundament(){
+        //var ursprung = this.nachbarn[0];
+        this.nachbarn.forEach((ursprung, i) => {
+          if(ursprung!=null){
+            for (var jj=0;jj<ursprung.typ;jj++){
+
+              if ( ursprung.nachbarn[jj] == this){
+                ursprung.nachbarn[jj] = null;
+              }
+            }
+            ursprung.anzNachbarn--;
+          }
+
+        });
+        // console.log(ursprung);
+        if (this.typ==3){
+          dreiecke[this.material]--;
+          document.getElementById('txtDreiecke['+this.material+']').value = dreiecke[this.material];
+        } else {
+          vierecke[this.material]--;
+          document.getElementById('txtVierecke['+this.material+']').value = vierecke[this.material];
         }
       }
-      // console.log(fundamente);
-    }else if (e.keyCode==49){ //Taste 1
-      while (f = fundamente[i++]){
-        if (f.enabled){
-          console.log(f);
-        }
-      }
-    } else if (e.keyCode==50){ //Taste 2
-      console.log(fundamente);
-    } else if (e.keyCode==53 || e.keyCode==54){ //Taste + / -
-      var faktor =0.8;
-      if (e.keyCode==53) faktor =1/faktor;
+    }
+    function bootUp(){
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      fundamente =[];
+      befehlsListe =[[0,0,0,4]]; //Fundament,Kante,Material,3-4-0
+      Fundament.setAnzahl(0);
+      var pp0 = new Punkt(200,200);
+      var pp1 = new Punkt(250,200);
+      var pp2 = new Punkt(225,225);
+      fundamente.push(new Fundament(pp0,pp1,4));
+      fundamente[0].anzNachbarn =0;
+
+      fundamente[0].zeichne();
+      berechneZeug();
+    }
+
+    bootUp();
+
+
+    canvas.onclick = function(e) {
+      // important: correct mouse position:
+      var rect = this.getBoundingClientRect(),
+      x = e.clientX - rect.left,
+      y = e.clientY  - rect.top,
+      i = 0;
+      ctx.clearRect(0, 0, canvas.width, canvas.height); // for demo
+      var roter = null;
+      while (f = fundamente[i++]){
+        f.zeichne(x,y);
+        if (f.enabled) roter = f;
+      }
+      if (roter != null) roter.zeichne(x,y,1);
+    };
+    function doMouseDown(e){
+      var rect = this.getBoundingClientRect();
+      canvas.merkMausX = e.clientX - rect.left;
+      canvas.merkMausY = e.clientY - rect.top;
+    }
+    function doMouseUp(e){
+      var rect = this.getBoundingClientRect();
+      var difX = canvas.merkMausX - e.clientX + rect.left;
+      var difY = canvas.merkMausY - e.clientY + rect.top;
+      // if ( difX<=-5 && difX>=5 || difY<=-5 && difY>=5){
       for(iFND=0;iFND<fundamente.length;iFND++) {
         for(iPkt=0;iPkt<fundamente[iFND].typ;iPkt++) {
-          fundamente[iFND].p[iPkt].x = fundamente[iFND].p[iPkt].x * faktor;
-          fundamente[iFND].p[iPkt].y = fundamente[iFND].p[iPkt].y * faktor;
+          fundamente[iFND].p[iPkt].x = fundamente[iFND].p[iPkt].x -difX;
+          fundamente[iFND].p[iPkt].y = fundamente[iFND].p[iPkt].y -difY;
         }
         fundamente[iFND].zeichne();
       }
+      // }
     }
-    berechneZeug();
-  }
+    window.addEventListener( "keypress", doKeyDown, false )
+    canvas.addEventListener("mousedown", doMouseDown);
+    canvas.addEventListener("mouseup", doMouseUp);
+    canvas.addEventListener("wheel",doWheel);
+    function doWheel(e){
+      var rect = this.getBoundingClientRect(),
+      x = e.clientX - rect.left,
+      y = e.clientY  - rect.top;
+      zoomNeu(e,x,y)
+      e.stopPropagation();
+      e.preventDefault();
+      return false;
+    }
+    function doKeyDown(e){
+      if (e.keyCode>=51 && e.keyCode <= 52){ //Taste 3 oder 4
+        baueAn(e.keyCode,true);
+      } else if (e.keyCode <= 48) { //Taste 0
+        loesche(true);
+      }else if (e.keyCode==49){ //Taste 1
+        fundamente.forEach((item, i) => {
+          if (item.enabled){
+            console.log(item);
+          }
+        });
+      } else if (e.keyCode==50){ //Taste 2
+        console.log(fundamente);
+      } else if (e.keyCode==53 || e.keyCode==54){ //Taste + / -
+        zoom(e.keyCode);
+      } else if (e.keyCode==55){ //Taste 7
+        var myJSON = JSON.stringify(befehlsListe);
+        console.log(myJSON);
+        downloadObjectAsJson(befehlsListe,"foundation");
+      }else if (e.keyCode==56){ //Taste 8
+        speicherCookie();
 
-  </script>
-</body>
-</html>
+      }
+
+
+      berechneZeug();
+    }
+    function setCookie(cname, cvalue, exdays) {
+      var d = new Date();
+      d.setTime(d.getTime() + (exdays*24*60*60*1000));
+      var expires = "expires="+ d.toUTCString();
+      document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+    }
+    function getCookie(cname) {
+      var name = cname + "=";
+      var decodedCookie = decodeURIComponent(document.cookie);
+      var ca = decodedCookie.split(';');
+      for(var i = 0; i <ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == ' ') {
+          c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+          return c.substring(name.length, c.length);
+        }
+      }
+      return "";
+    }
+    function speicherCookie(){
+      var myJSON = JSON.stringify(befehlsListe);
+      var val = btoa(myJSON)
+      console.log(val);
+      setCookie("json",val,365);
+    }
+    function downloadObjectAsJson(exportObj, exportName){
+      var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
+      var downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href",     dataStr);
+      downloadAnchorNode.setAttribute("download", exportName + ".json");
+      document.body.appendChild(downloadAnchorNode); // required for firefox
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+    }
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    function allesNeu(){
+      if (confirm("Are you sure?")){
+        bootUp();
+        speicherCookie();
+      }
+    }
+    async function importiereJSON(obj){
+      bootUp();
+      var merkMat = material;
+      for(var i=1; i<obj.length; i++){
+        item = obj[i];
+        if (item != null ){
+
+          // console.log(fundamente);
+          material = item[2];
+          await sleep(5);
+          var j =0;
+          while (j < fundamente.length) {
+            if (item[0] == fundamente[j].lfdNr){
+              break;
+            } else {
+              j++;
+            }
+          }
+
+          fundamente[j].enabled =true;
+          fundamente[j].akt = item[1];
+          if (item[3] != 0){
+            baueAn(item[3]+48);
+          } else {
+            loesche();
+
+          }
+        }
+      }
+      material=merkMat;
+    }
+    function leseCookieBefehle(){
+      var val = getCookie("json");
+      console.log(val);
+      if (val != ""){
+       // val="W1swLDAsMCw0XSxbMCwxLDAsNF0sWzEsMiwwLDRdXQ==";
+        val = atob(val);
+        importiereJSON(JSON.parse(val));
+     }
+    }
+
+    (function(){
+      function onChange(event) {
+        var reader = new FileReader();
+        reader.onload = onReaderLoad;
+        reader.readAsText(event.target.files[0]);
+      }
+      function onReaderLoad(event){
+        // console.log(event.target.result);
+        var obj = JSON.parse(event.target.result);
+        importiereJSON(obj);
+      }
+      document.getElementById('importDatei').addEventListener('change', onChange);
+    }());
+    setInterval(function(){speicherCookie();},30000);
+
+    leseCookieBefehle();
+    </script>
+  </body>
+  </html>
