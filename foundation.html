@@ -472,7 +472,9 @@
         var tp0 = new Punkt(this.p[0+this.akt].x,this.p[0+this.akt].y);
         var tp1 = new Punkt(this.p[(1+this.akt)%this.typ].x,this.p[(1+this.akt)%this.typ].y);
         // console.log(tp0);
-        var ret = new Fundament(tp1,tp0,t,this,this.akt,material);
+        var ret = new Fundament(tp1,tp0,t,this,this.akt-1,material);
+
+        //ret.setAkt(this.akt-1);
         //this.nachbarn[this.akt] = ret;
         //this.anzNachbarn++;
         // console.log(this);
