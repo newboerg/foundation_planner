@@ -27,6 +27,9 @@
     max-width: 30px;
     pointer-events: none;
   }
+  #txtAussenwaende{
+    max-width: 40px;
+  }
   #anleitung{
     font-size: 50px;
     border: 1px solid black;
@@ -92,6 +95,8 @@
   <button type="button" name="buttonSave" onclick="speicherCookie()">Save to Cookie</button>
   Import:<input type="file" id="importDatei" value="">
   <button type="button" name="button2" onclick="allesNeu();">Clear</button>
+  <button type="button" name="button" onclick="findeAussenwaende()">Calculate Walls</button>
+  <input type="text" id="txtAussenwaende" value="<-click" readonly>
   <canvas id="canvas" width="1200" height="850" title="3/4 drücken zum anbauen,0 zum Löschen, 5/6 zum rein/raus zoomen"></canvas>
 
   <div class="rand"><b>Resources:</b> <br>
@@ -113,6 +118,33 @@
   farbList =["orange","lightgrey","darkgrey","grey","brown"];
   var fundamente;
   var befehlsListe;
+
+  function findeAussenwaende(){
+    var aussenwand =[];
+    var anz=0;
+    for (var iFnd = 0; iFnd < fundamente.length; iFnd++) {
+      var aktFundament = fundamente[iFnd];
+      for (var iKante = 0; iKante < aktFundament.typ; iKante++) {
+        var kante = aktFundament.nachbarn[iKante];
+        if ( kante == null || kante == undefined){
+          aussenwand.push(aktFundament.p[iKante%aktFundament.typ]);
+          aussenwand.push(aktFundament.p[(iKante+1)%aktFundament.typ]);
+          anz++;
+        }
+      }
+    }
+    console.log(aussenwand);
+    for (var i=0;i< aussenwand.length;i+=2){
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "blue";
+      ctx.beginPath();
+      ctx.moveTo(aussenwand[i].x,aussenwand[i].y);
+      ctx.lineTo(aussenwand[i+1].x,aussenwand[i+1].y);
+      ctx.stroke();
+    }
+    document.getElementById('txtAussenwaende').value=anz;
+  }
+
   function berechneZeug(){
     document.getElementById('txtWood').value = document.getElementById('txtVierecke[0]').value * 5 + document.getElementById('txtDreiecke[0]').value * 5;
     document.getElementById('txtStone').value = document.getElementById('txtVierecke[0]').value * 35 + document.getElementById('txtDreiecke[0]').value * 32;
@@ -666,7 +698,7 @@
         console.log(myJSON);
         downloadObjectAsJson(befehlsListe,"foundation");
       }else if (e.keyCode==56){ //Taste 8
-        speicherCookie();
+        findeAussenwaende();
 
       }
 
@@ -751,7 +783,7 @@
     }
     function leseCookieBefehle(){
       var val = getCookie("json");
-      console.log(val);
+      // console.log(val);
       if (val != ""){
        // val="W1swLDAsMCw0XSxbMCwxLDAsNF0sWzEsMiwwLDRdXQ==";
         val = atob(val);
